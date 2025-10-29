@@ -20,6 +20,7 @@
   "[prisma]": {
     "editor.defaultFormatter": "Prisma.prisma"
   },
+  "explorer.sortOrder": "type"
   // "files.exclude": {
   //   ".husky": true,
   //   ".github": true,
