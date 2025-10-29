@@ -8,6 +8,7 @@ import {
 } from "discord-interactions"
 import "dotenv/config"
 import express from "express"
+import { saveMembers } from "./database.js"
 import { getResult, getShuffledOptions } from "./game.js"
 import { DiscordRequest, getRandomEmoji } from "./utils.js"
 
@@ -23,8 +24,8 @@ const activeGames = {}
  * Parse request body and verifies incoming requests using discord-interactions package
  */
 app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
-  // Interaction id, type and data
-  const { id, type, data } = req.body
+  // Interaction id, type, data, and other properties
+  const { id, type, data, guild_id, token } = req.body
 
   /**
    * Handle verification requests
@@ -100,7 +101,7 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })
     }
 
-    if (name === "wordle leaderboard" && id) {
+    if (name === "wordle_leaderboard" && id) {
       // Interaction context
       const context = req.body.context
       // User ID is in user field for (G)DMs, and member for servers
@@ -128,6 +129,76 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           ],
         },
       })
+    }
+
+    if (name === "scan_users") {
+      // Acknowledge the command and defer the response.
+      // This is important for commands that may take longer than 3 seconds.
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+      })
+
+      try {
+        // Fetch all members from the guild.
+        // The API has a limit of 1000 members per request.
+        // const endpoint = `guilds/${guild_id}/members?limit=1000`
+        const endpoint = `guilds/${guild_id}/members?limit=1000`
+        const membersRes = await DiscordRequest(endpoint, { method: "GET" })
+        const members = await membersRes.json()
+
+        // Extract user info and filter out bots
+        const membersToSave = members.filter((member) => !member.user.bot)
+        // members.map((member) => member.user).filter((user) => !user.bot)
+
+        // Save users to the database
+        const count = await saveMembers(membersToSave)
+
+        // Edit the original deferred message with the result
+        const followupEndpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`
+        await DiscordRequest(followupEndpoint, {
+          method: "PATCH",
+          body: { content: `Successfully scanned and saved ${count} users.` },
+        })
+      } catch (err) {
+        console.error("Error scanning users:", err)
+      }
+
+      return
+    }
+
+    if (name === "init") {
+      // Acknowledge the command and defer the response.
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+      })
+
+      try {
+        // 1. Fetch all members from the guild.
+        const endpoint = `guilds/${guild_id}/members?limit=1000`
+        const membersRes = await DiscordRequest(endpoint, { method: "GET" })
+        const members = await membersRes.json()
+
+        // Extract user info and filter out bots
+        const membersToSave = members.filter((member) => !member.user.bot)
+
+        // Save users to the database
+        const count = await saveMembers(membersToSave)
+
+        // Edit the original deferred message with the result
+        const followupEndpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`
+        await DiscordRequest(followupEndpoint, {
+          method: "PATCH",
+          body: { content: `Successfully scanned and saved ${count} users.` },
+        })
+      } catch (err) {
+        console.error("Error scanning users:", err)
+      }
+
+      try {
+        // 2. Scrape channel messages for scores
+      } catch (err) {
+        console.error("Error scraping scores:", err)
+      }
     }
 
     console.error(`unknown command: ${name}`)
