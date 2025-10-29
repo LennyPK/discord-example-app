@@ -59,7 +59,24 @@ const CHALLENGE_COMMAND = {
 //   // ],
 // }
 
+const SCAN_USERS_COMMAND = {
+  name: "scan_users",
+  description: "Scan and list all users in the guild",
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 1, 2],
+}
+
+const INIT_COMMAND = {
+  name: "init",
+  description: "Initialize the leaderboard and scrape the channel for users and scores",
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 1, 2],
+}
+
 // const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND, WORDLE_LEADERBOARD_COMMAND]
-const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND]
+
+const ALL_COMMANDS = [INIT_COMMAND, TEST_COMMAND, CHALLENGE_COMMAND, SCAN_USERS_COMMAND]
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS)
