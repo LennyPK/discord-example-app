@@ -1,7 +1,7 @@
 import "dotenv/config"
 import { getRPSChoices } from "./game.js"
 import { capitalize, InstallGlobalCommands } from "./utils.js"
-import { getScanChoices } from "./wordle.js"
+import { getLeaderboardChoices, getScanChoices } from "./wordle.js"
 
 // Get the game choices from game.js
 function createCommandChoices() {
@@ -36,13 +36,32 @@ function createScanChoices() {
   return commandChoices
 }
 
+function createLeadboardChoices() {
+  const choices = getLeaderboardChoices()
+  const commandChoices = []
+
+  for (let [key, choice] of choices) {
+    commandChoices.push({
+      name: choice.title,
+      description: choice.description,
+      value: key,
+    })
+  }
+
+  return commandChoices
+}
+
+/*********************
+ * COMMANDS START HERE
+ *********************/
+
 // Simple test command
 const TEST_COMMAND = {
   name: "test",
   description: "Basic command",
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: [0],
+  contexts: [0],
 }
 
 // Command containing options
@@ -59,39 +78,24 @@ const CHALLENGE_COMMAND = {
     },
   ],
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 2],
+  integration_types: [0],
+  contexts: [0],
 }
-
-// const WORDLE_LEADERBOARD_COMMAND = {
-//   name: "wordle_leaderboard",
-//   description: "Check the Wordle Leaderboard",
-//   type: 1,
-//   // options: [
-//   //   {
-//   //     type: 2,
-//   //     name: "something?",
-//   //     description: "What leaderboard?",
-//   //     required: false,
-//   //     choices: ["daily", "weekly", "monthly"],
-//   //   },
-//   // ],
-// }
 
 const SCAN_USERS_COMMAND = {
   name: "scan_users",
   description: "Scan and list all users in the guild",
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: [0],
+  contexts: [0],
 }
 
 const INIT_COMMAND = {
   name: "init",
   description: "Initialize the leaderboard and scrape the channel for users and scores",
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: [0],
+  contexts: [0],
 }
 
 const SCRAPE_SCORES_COMMAND = {
@@ -108,11 +112,34 @@ const SCRAPE_SCORES_COMMAND = {
     },
   ],
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: [0],
+  contexts: [0],
 }
 
-// const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND, WORDLE_LEADERBOARD_COMMAND]
+const MY_STATS = {
+  name: "my_stats",
+  description: "Display your Wordle statistics",
+  type: 1,
+  integration_types: [0],
+  contexts: [0],
+}
+
+const LEADERBOARD = {
+  name: "wordle_leaderboard",
+  description: "Display the selected Wordle leaderboard",
+  options: [
+    {
+      type: 3,
+      name: "range",
+      description: "Select the leaderboard range",
+      required: true,
+      choices: createLeadboardChoices(),
+    },
+  ],
+  type: 1,
+  integration_types: [0],
+  contexts: [0],
+}
 
 const ALL_COMMANDS = [
   INIT_COMMAND,
@@ -120,6 +147,8 @@ const ALL_COMMANDS = [
   CHALLENGE_COMMAND,
   SCAN_USERS_COMMAND,
   SCRAPE_SCORES_COMMAND,
+  MY_STATS,
+  LEADERBOARD,
 ]
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS)

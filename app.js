@@ -12,7 +12,7 @@ import { findUserByMentionOrName, saveMembers } from "./database.js"
 import { getResult, getShuffledOptions } from "./game.js"
 import { prisma } from "./prisma-client.js"
 import { DiscordRequest, getRandomEmoji } from "./utils.js"
-import { fetchMessagesUntil } from "./wordle.js"
+import { fetchMessagesUntil, wordleScore } from "./wordle.js"
 
 // Create an express app
 const app = express()
@@ -108,25 +108,101 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const context = req.body.context
       // User ID is in user field for (G)DMs, and member for servers
       const userId = context === 0 ? req.body.member.user.id : req.body.user.id
+      // Leaderboard type choice
+      const leaderboardType = req.body.data.options[0].value
+
+      const commandUser = await findUserByMentionOrName(userId, null)
+
+      console.info(`Generating ${leaderboardType} leaderboard and fetching all users...`)
+
+      const users = await prisma.user.findMany()
+      console.info("Fetched users for leaderboard:", users.length)
+
+      const leaderboard = []
+
+      for (const user of users) {
+        // Fetch wordle scores for the user based on the leaderboard type
+        const now = new Date()
+        let sinceDate = new Date()
+
+        console.info("Weekly:")
+
+        if (leaderboardType === "weekly") {
+          sinceDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        } else if (leaderboardType === "monthly") {
+          sinceDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        } else {
+          sinceDate = new Date(0) // all time
+        }
+
+        const wordleScores = await prisma.wordle.findMany({
+          where: {
+            userId: user.id,
+            date: {
+              gte: sinceDate,
+            },
+          },
+          orderBy: {
+            score: "desc",
+          },
+        })
+
+        console.info(
+          `Fetched ${wordleScores.length} Wordle scores for user ${user.username} since ${sinceDate}`
+        )
+
+        // console.info("Wordle scores for user:", wordleScores)
+
+        // Calculate leaderboard score
+        const gamesPlayed = wordleScores.length
+        const maxGames = name === "weekly" ? 7 : 30
+        const solvedGames = wordleScores.filter((w) => w.score > 0)
+        const solveRate = gamesPlayed > 0 ? solvedGames.length / gamesPlayed : 0
+        const avgGuesses =
+          solvedGames.reduce((sum, w) => sum + w.score, 0) / (solvedGames.length || 1)
+        const leaderboardScore = wordleScore(gamesPlayed, maxGames, solveRate, avgGuesses)
+
+        console.info(`Leaderboard score for user ${user.username}:`, leaderboardScore)
+
+        if (leaderboardScore > 0) {
+          leaderboard.push({
+            id: user.discordId,
+            username: user.username,
+            score: leaderboardScore,
+            weeklyGames: gamesPlayed,
+            totalGames:
+              leaderboardType === "weekly" ? 7 : leaderboardType === "monthly" ? 30 : gamesPlayed,
+          })
+        }
+      }
 
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          flags: InteractionResponseFlags.IS_COMPONENTS_V2,
-          components: [
+          embeds: [
             {
-              type: MessageComponentTypes.TEXT_DISPLAY,
-              content: `my User ID is ${userId}`,
-            },
-            {
-              type: MessageComponentTypes.ACTION_ROW,
-              components: [
-                {
-                  type: MessageComponentTypes.FILE,
-                  label: "Choose a File",
-                  style: ButtonStyleTypes.PREMIUM,
-                },
-              ],
+              title: `Leaderboard for ${leaderboardType}`,
+              description: leaderboard
+                .sort((a, b) => b.score - a.score)
+                .map((entry, index) => {
+                  let line = `${index + 1}. <@${entry.id}>: ${entry.score.toFixed(2)}`
+
+                  // Add conditional info based on leaderboard type
+                  if (leaderboardType === "weekly") {
+                    line += ` — Played ${entry.weeklyGames}/${entry.totalGames} games`
+                  } else if (leaderboardType === "monthly") {
+                    line += ` — Played ${entry.monthlyGames}/${entry.totalGames} games`
+                  } else if (leaderboardType === "allTime") {
+                    line += ` — Played ${entry.totalGames} games`
+                  }
+
+                  return line
+                })
+                .join("\n"),
+              footer: {
+                text: `Requested by ${commandUser.globalName} at ${new Date().toLocaleString()}`,
+              },
+              color: 5763719,
             },
           ],
         },
@@ -174,12 +250,8 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
       })
 
-      // Interaction context
-      const context = req.body.context
-      // User ID is in user field for (G)DMs, and member for servers
-      // const userId = context === 0 ? req.body.member.user.id : req.body.user.id
       // User's object choice
-      const scanUntil = req.body.data.options[0].value // -1, 7, 30
+      const scanUntil = req.body.data.options[0].value
 
       if (scanUntil) {
         console.info("Scrape until option selected:", scanUntil)
@@ -203,10 +275,6 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       try {
         const channelId = req.body.channel_id
-        // const endpoint = `channels/${channelId}/messages?limit=100`
-        // const messagesRes = await DiscordRequest(endpoint, { method: "GET" })
-        // const messages = await messagesRes.json()
-        console.info("Before fetchMessagesUntil")
 
         const messages = await fetchMessagesUntil(channelId, untilTimestamp)
 
@@ -222,9 +290,7 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // console.info(message.content)
 
           // We are only interested in messages from our bot that contain "results"
-          // TODO: Change back to bot check
           if (message.author.bot && message.content.includes("Here are yesterday's results")) {
-            // if (message.content.includes("Here are yesterday's results")) {
             const lines = message.content.split("\n")
 
             const messageDate = new Date(message.timestamp)
@@ -327,6 +393,44 @@ app.post("/interactions", verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // 2. Scrape channel messages for scores
       } catch (err) {
         console.error("Error scraping scores:", err)
+      }
+    }
+
+    if (name === "my_stats") {
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+      })
+
+      const context = req.body.context
+      const userId = req.body.member.user.id
+
+      const user = await findUserByMentionOrName(userId, null)
+
+      console.info("Fetching stats for user:", user)
+
+      if (user) {
+        const wordleStats = await prisma.wordle.aggregate({
+          where: { userId: user.id },
+          _count: { score: true },
+          _avg: { score: true },
+          _max: { score: true },
+          _min: { score: true },
+        })
+
+        console.info("Wordle stats:", wordleStats)
+
+        const followupEndpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`
+        await DiscordRequest(followupEndpoint, {
+          method: "PATCH",
+          body: {
+            content: `Your Wordle stats:\n- Games Played: ${
+              wordleStats._count.score
+            }\n- Average Score: ${wordleStats._avg.score?.toFixed(2)}\n- Best Score: ${
+              wordleStats._min.score
+            }\n- Worst Score: ${wordleStats._max.score}`,
+          },
+        })
+        return
       }
     }
 
