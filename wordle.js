@@ -1,151 +1,4 @@
-// export function getResult(p1, p2) {
-// 	let gameResult;
-// 	if (RPSChoices[p1.objectName] && RPSChoices[p1.objectName][p2.objectName]) {
-// 		// o1 wins
-// 		gameResult = {
-// 			win: p1,
-// 			lose: p2,
-// 			verb: RPSChoices[p1.objectName][p2.objectName],
-// 		};
-// 	} else if (
-// 		RPSChoices[p2.objectName] &&
-// 		RPSChoices[p2.objectName][p1.objectName]
-// 	) {
-// 		// o2 wins
-// 		gameResult = {
-// 			win: p2,
-// 			lose: p1,
-// 			verb: RPSChoices[p2.objectName][p1.objectName],
-// 		};
-// 	} else {
-// 		// tie -- win/lose don't
-// 		gameResult = { win: p1, lose: p2, verb: 'tie' };
-// 	}
-
 import { DiscordRequest, wait } from "./utils.js"
-
-// 	return formatResult(gameResult);
-// }
-
-// function formatResult(result) {
-// 	const { win, lose, verb } = result;
-// 	return verb === 'tie'
-// 		? `<@${win.id}> and <@${lose.id}> draw with **${win.objectName}**`
-// 		: `<@${win.id}>'s **${win.objectName}** ${verb} <@${lose.id}>'s **${lose.objectName}**`;
-// }
-
-// this is just to figure out winner + verb
-// const RPSChoices = {
-// 	rock: {
-// 		description: 'sedimentary, igneous, or perhaps even metamorphic',
-// 		virus: 'outwaits',
-// 		computer: 'smashes',
-// 		scissors: 'crushes',
-// 	},
-// 	cowboy: {
-// 		description: 'yeehaw~',
-// 		scissors: 'puts away',
-// 		wumpus: 'lassos',
-// 		rock: 'steel-toe kicks',
-// 	},
-// 	scissors: {
-// 		description: 'careful ! sharp ! edges !!',
-// 		paper: 'cuts',
-// 		computer: 'cuts cord of',
-// 		virus: 'cuts DNA of',
-// 	},
-// 	virus: {
-// 		description: 'genetic mutation, malware, or something inbetween',
-// 		cowboy: 'infects',
-// 		computer: 'corrupts',
-// 		wumpus: 'infects',
-// 	},
-// 	computer: {
-// 		description: 'beep boop beep bzzrrhggggg',
-// 		cowboy: 'overwhelms',
-// 		paper: 'uninstalls firmware for',
-// 		wumpus: 'deletes assets for',
-// 	},
-// 	wumpus: {
-// 		description: 'the purple Discord fella',
-// 		paper: 'draws picture on',
-// 		rock: 'paints cute face on',
-// 		scissors: 'admires own reflection in',
-// 	},
-// 	paper: {
-// 		description: 'versatile and iconic',
-// 		virus: 'ignores',
-// 		cowboy: 'gives papercut to',
-// 		rock: 'covers',
-// 	},
-// };
-
-// export function getRPSChoices() {
-// 	return Object.keys(RPSChoices);
-// }
-
-// // Function to fetch shuffled options for select menu
-// export function getShuffledOptions() {
-// 	const allChoices = getRPSChoices();
-// 	const options = [];
-
-// 	for (let c of allChoices) {
-// 		// Formatted for select menus
-// 		// https://discord.com/developers/docs/components/reference#string-select-select-option-structure
-// 		options.push({
-// 			label: capitalize(c),
-// 			value: c.toLowerCase(),
-// 			description: RPSChoices[c]['description'],
-// 		});
-// 	}
-
-// 	return options.sort(() => Math.random() - 0.5);
-// }
-
-// const RPSChoices = {
-// 	rock: {
-// 		description: 'sedimentary, igneous, or perhaps even metamorphic',
-// 		virus: 'outwaits',
-// 		computer: 'smashes',
-// 		scissors: 'crushes',
-// 	},
-// 	cowboy: {
-// 		description: 'yeehaw~',
-// 		scissors: 'puts away',
-// 		wumpus: 'lassos',
-// 		rock: 'steel-toe kicks',
-// 	},
-// 	scissors: {
-// 		description: 'careful ! sharp ! edges !!',
-// 		paper: 'cuts',
-// 		computer: 'cuts cord of',
-// 		virus: 'cuts DNA of',
-// 	},
-// 	virus: {
-// 		description: 'genetic mutation, malware, or something inbetween',
-// 		cowboy: 'infects',
-// 		computer: 'corrupts',
-// 		wumpus: 'infects',
-// 	},
-// 	computer: {
-// 		description: 'beep boop beep bzzrrhggggg',
-// 		cowboy: 'overwhelms',
-// 		paper: 'uninstalls firmware for',
-// 		wumpus: 'deletes assets for',
-// 	},
-// 	wumpus: {
-// 		description: 'the purple Discord fella',
-// 		paper: 'draws picture on',
-// 		rock: 'paints cute face on',
-// 		scissors: 'admires own reflection in',
-// 	},
-// 	paper: {
-// 		description: 'versatile and iconic',
-// 		virus: 'ignores',
-// 		cowboy: 'gives papercut to',
-// 		rock: 'covers',
-// 	},
-// };
 
 export const scanChoices = {
   default: {
@@ -164,6 +17,25 @@ export const scanChoices = {
 
 export function getScanChoices() {
   return Object.entries(scanChoices)
+}
+
+export const leaderboardChoices = {
+  allTime: {
+    title: "All Time",
+    description: "View the all-time Wordle leaderboard",
+  },
+  weekly: {
+    title: "Weekly",
+    description: "View the weekly Wordle leaderboard",
+  },
+  monthly: {
+    title: "Monthly",
+    description: "View the monthly Wordle leaderboard",
+  },
+}
+
+export function getLeaderboardChoices() {
+  return Object.entries(leaderboardChoices)
 }
 
 export async function fetchMessagesUntil(channelId, timestamp) {
@@ -204,3 +76,56 @@ export async function fetchMessagesUntil(channelId, timestamp) {
 
   return allMessages
 }
+
+/**
+ * Calculate a Wordle leaderboard score for a player.
+ *
+ * @param {number} gamesPlayed - Number of Wordles the player has completed.
+ * @param {number} maxGames - Total number of Wordles possible (e.g., days in the period).
+ * @param {number} solveRate - Fraction of games solved successfully (0 to 1).
+ * @param {number} avgGuesses - Average number of guesses (only for solved games).
+ * @returns {number} Player's leaderboard score (0–100 scale).
+ */
+
+export function wordleScore(gamesPlayed, maxGames, solveRate, avgGuesses) {
+  /** CHATGPT
+  if (maxGames === 0 || avgGuesses <= 0) return 0;
+
+  // Step 1: Skill-based efficiency (normalized out of 100)
+  const efficiency = 100 * ((solveRate * (6 - avgGuesses)) / 6);
+
+  // Step 2: Participation multiplier (weights frequency at 30%)
+  const participationMultiplier = 0.7 + 0.3 * (gamesPlayed / maxGames);
+
+  // Step 3: Final composite score
+  const finalScore = efficiency * participationMultiplier;
+
+  // Keep it in a 0–100 range
+  return Math.max(0, Math.min(100, finalScore));
+	*/
+
+  /** CLAUDE CODE */
+  if (maxGames === 0 || gamesPlayed === 0) return 0
+  if (solveRate === 0) return 0 // No solved games = 0 score
+  if (avgGuesses < 1 || avgGuesses > 6) return 0 // Invalid avg
+
+  // Solve rate component (0-50 points)
+  const solveBonus = solveRate * 50
+
+  // Guess efficiency component (0-50 points, only counts solved games)
+  const guessEfficiency = ((6 - avgGuesses) / 5) * 50
+
+  // Combined skill score (0-100 points)
+  const skillScore = solveBonus + guessEfficiency
+
+  // Participation multiplier (70% baseline + 30% for consistency)
+  const participationMultiplier = 0.7 + 0.3 * (gamesPlayed / maxGames)
+  // const participationMultiplier = Math.max(0.5, 0.7 + 0.3 * (gamesPlayed / maxGames))
+
+  return skillScore * participationMultiplier
+}
+
+// Example usage:
+// console.log(wordleScore(30, 30, 1.0, 3.8)) // Alice → ~43.5
+// console.log(wordleScore(20, 30, 0.95, 3.4)) // Bob → ~42.9
+// console.log(wordleScore(10, 30, 1.0, 3.1)) // Dan → ~35.7
